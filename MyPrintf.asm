@@ -1,14 +1,16 @@
 global _start           ;Makes it visible for a linker from where to start
  
 section .data           ;Initialising variables in data segment
-String db "Hello %cworld!", 10   ;conditionally format string to print
+String db "Hello %xworld!", 10, "$"   ;conditionally format string to print
 StringLen equ $-String; length of the String to make things a little bit easier
+Count db 28
+section .bss
 Buffer resb 128
 
 section .text
 _start:
 
-    push 9              ;unpaired push for giving arguments in function
+    push 13              ;unpaired push for giving arguments in function
     push String         ;
     call MyPrintf
 
@@ -43,8 +45,8 @@ MyPrintf:
     Ready:
     ;dec rcx
     ;cmp rcx, 0
-    cmp rsi, String+StringLen
-    jb CreateBuffer
+    cmp byte [rsi], '$'
+    jne CreateBuffer
     ;________________________END___________________________
 
     sub rsp, rdx          ;return pointer rsp where it was
@@ -68,6 +70,9 @@ PercentHandle:
 
     cmp byte [rsi+1], 'd'
     je PrintDecimal
+
+    cmp byte [rsi+1], 'x'
+    je PrintHex
 
     inc rsi
     jmp Ready
@@ -96,3 +101,69 @@ PercentHandle:
     inc rdi
     add rsi, 2
     jmp Ready
+
+    PrintHex:
+    
+    mov eax, 0f0000000h
+    mov cl, 28
+    ;mov rbp, 28
+
+    PHEX:
+
+    mov rbx, [rsp]
+    and ebx, eax
+    shr ebx, cl
+    call int_to_acsii
+    mov byte [rdi], bl
+    add rdi, 1
+
+    ror rax, 4
+    sub cl, 4
+    ;mov Count, cl
+
+    cmp cl, 0
+    ja PHEX
+
+    add rsi, 2
+    jmp Ready
+
+    ;mov rbx, rax
+    ;and ebx, 0ff000000h
+    ;shr ebx, 24 
+    ;call int_to_acsii
+    ;mov byte [rdi], bl
+    ;inc rdi
+
+    ;mov ebx, eax
+    ;and ebx, 00ff0000h
+    ;shr ebx, 16 
+    ;call int_to_acsii
+    ;mov byte [rdi], bl
+    ;inc rdi
+
+    ;mov ebx, eax
+    ;and ebx, 000000f0h
+    ;shr ebx, 8 
+    ;call int_to_acsii
+    ;mov byte [rdi], bl
+    ;inc rdi
+
+    ;mov ebx, eax
+    ;and ebx, 0000000fh 
+    ;call int_to_acsii
+    ;mov byte [rdi], bl
+    ;inc rdi    
+    
+int_to_acsii:
+    cmp bl, 10
+    js DIGIT
+    sub bl, 10
+    add bl, 'A'
+    
+    jmp SKIP
+    DIGIT:
+    add bl, '0'
+    
+    SKIP:
+
+    ret

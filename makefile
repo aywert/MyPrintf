@@ -5,6 +5,5 @@ compile:
 
 link: 
 	ld -o MyPrintf.exe MyPrintf.o
-
 run:
-	./MyPrintf.exe
+	./MyPrintf.exe 
