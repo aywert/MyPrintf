@@ -3,14 +3,14 @@ global _start           ;Makes it visible for a linker from where to start
 section .data           ;Initialising variables in data segment
 String db "Hello %xworld!", 10, "$"   ;conditionally format string to print
 StringLen equ $-String; length of the String to make things a little bit easier
-Count db 28
+Count dq 0
 section .bss
 Buffer resb 128
 
 section .text
 _start:
 
-    push 13              ;unpaired push for giving arguments in function
+    push 1760             ;unpaired push for giving arguments in function
     push String         ;
     call MyPrintf
 
@@ -22,10 +22,10 @@ _start:
 ;MyPrintf - function that prints given string to console adding given arguments proccessed via %
 ;Enter: Stack: ... | par_3 | par_2 | par_1 | StringPtr
 ;Exit:  
-;Destr: RDI, RDX, RAX (+ related to syscall)
+;Destr: RDI, rcx, RAX (+ related to syscall)
 ;------------------------------------------------------------------------------------------------
 MyPrintf:
-    mov rdx, 8          ;Preparing rdx reg to count number of variables times 8 (Given value of 8 as it expects to get at least a string)
+    mov byte [Count], 8          ;Preparing rcx reg to count number of variables times 8 (Given value of 8 as it expects to get at least a string)
     add rsp, 8          ;obtaining arguments from the stack (string)
     mov rsi, [rsp]      ;StringPtr
     
@@ -49,7 +49,7 @@ MyPrintf:
     jne CreateBuffer
     ;________________________END___________________________
 
-    sub rsp, rdx          ;return pointer rsp where it was
+    sub rsp, qword [Count]          ;return pointer rsp where it was
 
     mov rsi, Buffer
     mov rdx, StringLen  ; is to be replaced by function counting number of chars
@@ -61,7 +61,7 @@ MyPrintf:
 
 PercentHandle:
     add rsp, 8              ;Now rsp points to following argument in stack | StringAddress | par_1 | par_2 | par_3 | ... |
-    add rdx, 8          
+    add qword [Count], 8          
     cmp byte [rsi+1], '%'
     je PrintPercent
 
@@ -81,7 +81,7 @@ PercentHandle:
 
     PrintPercent:
     sub rsp, 8
-    sub rdx, 8          ; it does not requiere argument to print %, so don`t counts this
+    sub qword [Count], 8          ; it does not requiere argument to print %, so don`t counts this
     mov byte [rdi], '%'
     inc rdi
     add rsi, 2          ; adding 2 as we have to skip another %
@@ -103,7 +103,19 @@ PercentHandle:
     jmp Ready
 
     PrintHex:
-    
+
+    ;mov rax, [rsp]
+    ;cqo          ; расширяем регистр rdx знаковым битом из RAX 
+    ;mov rbx, 16   ; 64-разрядный регистр
+    ;div rbx 
+
+    ;call int_to_acsii
+    ;mov byte [rdi], al
+    ;add rdi, 1;
+
+    ;add rsi, 2
+    ;jmp Ready
+
     mov eax, 0f0000000h
     mov cl, 28
     ;mov rbp, 28
@@ -115,14 +127,14 @@ PercentHandle:
     shr ebx, cl
     call int_to_acsii
     mov byte [rdi], bl
-    add rdi, 1
+    inc rdi
 
-    ror rax, 4
+    shr rax, 4
     sub cl, 4
     ;mov Count, cl
 
-    cmp cl, 0
-    ja PHEX
+    cmp eax, 0h
+    jne PHEX
 
     add rsi, 2
     jmp Ready
