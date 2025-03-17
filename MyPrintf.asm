@@ -1,7 +1,9 @@
 global _start           ;Makes it visible for a linker from where to start
  
 section .data           ;Initialising variables in data segment
-String db "Hello %bworld!", 10, "$"   ;conditionally format string to print
+String db "%s is the best %s", 10, "$"   ;conditionally format string to print
+Linux db "Linux$"
+OP db "Operation System$"
 StringLen equ $-String; length of the String to make things a little bit easier
 Count dq 0
 BufferLen dq 0
@@ -10,8 +12,8 @@ Buffer resb 128
 
 section .text
 _start:
-
-    push 113            ;unpaired push for giving arguments in function
+    push OP
+    push Linux            ;unpaired push for giving arguments in function
     push String         ;
     call MyPrintf
 
@@ -43,19 +45,18 @@ CreateBuffer:
 
     movsb
 
-    add qword [BufferLen], 1
-
 Ready:
-    ;dec rcx
-    ;cmp rcx, 0
+
     cmp byte [rsi], '$'
     jne CreateBuffer
+    movsb
     ;________________________END___________________________
 
     sub rsp, qword [Count]          ;return pointer rsp where it was
 
     mov rsi, Buffer
-    mov rdx, BufferLen  ; is to be replaced by function counting number of chars
+    call StrLen
+    mov rdx, rcx  ; is to be replaced by function counting number of chars
     mov rdi, 1          ; sets output in console
     ;rsi is given
     mov rax, 1          ; в RAX - номер функции для вывода в поток 
@@ -80,8 +81,11 @@ PercentHandle:
     cmp byte [rsi+1], 'b'
     je PrintBinary
 
-    ;cmp byte [rsi+1], 'o'
-    ;je PrintOctal
+    cmp byte [rsi+1], 'o'
+    je PrintOctal
+
+    cmp byte [rsi+1], 's'
+    je PrintString
 
     inc rsi
     jmp Ready
@@ -107,6 +111,26 @@ PrintChar:
     mov rax, [rsp] 
     mov byte [rdi], al
     inc rdi
+    add rsi, 2
+    jmp Ready
+
+PrintString:
+    mov rax, rsi
+
+    mov rsi, [rsp]
+    call StrLen; Counts Length of the given string and puts value to rcx
+    rep movsb
+
+    mov rsi, rax
+
+    add rsi, 2
+    jmp Ready
+
+
+PrintOctal:
+
+    mov eax, 10000000000000000000000000000000b
+
     add rsi, 2
     jmp Ready
 
@@ -174,4 +198,15 @@ int_to_acsii:
     
     SKIP:
 
+    ret
+
+;__________________________
+; rsi - address to the string to count length of
+; Exit: rcx - Length of the string
+StrLen:
+    mov rcx, -1
+    LengthCycle:
+    inc rcx
+    cmp byte [rsi+rcx], '$'
+    jne LengthCycle
     ret
