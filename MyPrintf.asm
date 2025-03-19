@@ -1,15 +1,5 @@
 global _start           ;Makes it visible for a linker from where to start
  
-section .data           ;Initialising variables in data segment
-String db "%s is the best %s", 10, "$"   ;conditionally format string to print
-Linux db "Linux$"
-OP db "Operation System$"
-StringLen equ $-String; length of the String to make things a little bit easier
-Count dq 0
-BufferLen dq 0
-section .bss
-Buffer resb 128
-
 section .text
 _start:
     push OP
@@ -65,28 +55,36 @@ Ready:
 
 PercentHandle:
     add rsp, 8              ;Now rsp points to following argument in stack | StringAddress | par_1 | par_2 | par_3 | ... |
-    add qword [Count], 8          
-    cmp byte [rsi+1], '%'
-    je PrintPercent
+    add qword [Count], 8
 
-    cmp byte [rsi+1], 'c'
-    je PrintChar
+    xor rax, rax
+    mov al, byte [rsi+1]
+    sub rax, '%'
+    ; shl rax, 3
+    jmp [L4 + 8*rax]
 
-    cmp byte [rsi+1], 'd'
-    je PrintDecimal
+    PercentT:
+    jmp PrintPercent
 
-    cmp byte [rsi+1], 'x'
-    je PrintHex
+    CharT:
+    jmp PrintChar
 
-    cmp byte [rsi+1], 'b'
-    je PrintBinary
+    DecimalT:
+    jmp PrintDecimal
 
-    cmp byte [rsi+1], 'o'
-    je PrintOctal
+    HexalT:
+    jmp PrintHex
 
-    cmp byte [rsi+1], 's'
-    je PrintString
+    BinT:
+    jmp PrintBinary
 
+    OctalT:
+    jmp PrintOctal
+
+    StringT:
+    jmp PrintString
+
+    PercentHandleDefault:
     inc rsi
     jmp Ready
 
@@ -125,7 +123,6 @@ PrintString:
 
     add rsi, 2
     jmp Ready
-
 
 PrintOctal:
 
@@ -210,3 +207,35 @@ StrLen:
     cmp byte [rsi+rcx], '$'
     jne LengthCycle
     ret
+
+
+
+section .data           ;Initialising variables in data segment
+
+ 
+
+String db "%y is the best %y", 10, "$"   ;conditionally format string to print
+Linux db "Linux$"
+OP db "Operation System$"
+StringLen equ $-String; length of the String to make things a little bit easier
+Count dq 0
+BufferLen dq 0
+
+align 8 ;Выравнивать адреса по границам, кратным 8
+L4:
+    dq PercentT; %
+    times 'a' - '%' dq PercentHandleDefault  
+    dq BinT ;
+    dq CharT ; 
+    dq DecimalT ;
+    times 'o' - 'd' - 1 dq PercentHandleDefault 
+    dq OctalT ;
+    times 3 dq PercentHandleDefault 
+    dq StringT ;
+    times 4 dq PercentHandleDefault  
+    dq HexalT ;
+    times 2 dq PercentHandleDefault
+
+section .bss
+Buffer resb 128
+
