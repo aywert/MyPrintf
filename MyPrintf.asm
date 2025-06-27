@@ -134,19 +134,28 @@ PrintChar:
     jmp Ready
 
 PrintString:
-    mov rax, rsi
+    mov rbx, rsi
 
     mov rsi, [rsp]
-    call StrLen; Counts Length of the given string and puts value to rcx
+    ;-------------------
+    xor rcx, rcx
+    mov rcx, -1
+    LengthCycleInString:
+    inc rcx
+    cmp byte [rsi+rcx], 0
+    mov rax, [rsi+rcx]
+    
+    jne LengthCycleInString
+    ;--------------------
+    ;call StrLen; Counts Length of the given string and puts value to rcx
     rep movsb
 
-    mov rsi, rax
+    mov rsi, rbx
 
     add rsi, 2
     jmp Ready
 
 PrintOctal:
-
     mov eax, 10000000000000000000000000000000b ;80000000H
 
     add rsi, 2
@@ -265,4 +274,4 @@ L4:
     times 2 dq PercentHandleDefault
 
 section .bss
-Buffer resb 50
+Buffer resb 128
