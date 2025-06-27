@@ -1,9 +1,8 @@
 all: compile link
 
 compile:
-	nasm MyPrintf.asm -o MyPrintf.o -f elf64 
-
-link: 
-	ld -o MyPrintf.exe MyPrintf.o
+	nasm  -f elf64  MyPrintf.asm -o MyPrintf.o 
+link:
+	gcc  MyPrintf.o main.c -static -o MyPrintf.exe 
 run:
 	./MyPrintf.exe 
